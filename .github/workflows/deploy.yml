@@ -9,11 +9,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-
 
       - name: Deploy to EC2
         env:
@@ -29,8 +27,6 @@ jobs:
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
 
-
-          # Wait for SSH to be ready with retries
           for i in {1..5}; do
             if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "echo 'SSH Ready'"; then
               echo "SSH connection successful"
@@ -46,37 +42,19 @@ jobs:
               sudo yum install -y nodejs
             fi
 
-
             if ! command -v pm2 &> /dev/null; then
               sudo npm install -g pm2
             fi
-
 
             mkdir -p ~/hanmoa-backend
             cd ~/hanmoa-backend
             rm -rf *
           '
 
-'
-
           scp -o StrictHostKeyChecking=no -i private_key.pem -r * ${USER}@${HOST}:~/hanmoa-backend/
 
-
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} ""
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "
             cd ~/hanmoa-backend
-
-            cat > .env << 'ENVEOF'
-          NODE_ENV=production
-          PORT=3000
-          DB_HOST=${DB_HOST}
-          DB_PORT=5432
-          DB_USERNAME=${DB_USERNAME}
-          DB_PASSWORD=${DB_PASSWORD}
-          DB_DATABASE=${DB_DATABASE}
-          JWT_SECRET=${JWT_SECRET}
-          JWT_EXPIRES_IN=7d
-          ENVEOF
-
 
             cat > .env << 'ENVEOF'
           NODE_ENV=production
@@ -93,12 +71,9 @@ jobs:
             npm install
             npm run build
 
-
             pm2 delete hanmoa-backend || true
             pm2 start dist/main.js --name hanmoa-backend
             pm2 save
-          "
-
           "
 
           rm -f private_key.pem
