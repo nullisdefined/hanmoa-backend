@@ -37,7 +37,13 @@ lerna-debug.log*
 
 # Environment
 .env
+.env.development
+.env.test
+.env.production
 
 # Logs
 logs/
 *.log
+
+# Claude
+CLAUDE.md

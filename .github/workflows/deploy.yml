@@ -1,0 +1,77 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2
+        env:
+          PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          HOST: ${{ secrets.EC2_HOST }}
+          USER: ec2-user
+        run: |
+          echo "$PRIVATE_KEY" > private_key.pem
+          chmod 600 private_key.pem
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} << 'EOF'
+            # Install Node.js if not exists
+            if ! command -v node &> /dev/null; then
+              curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -
+              sudo yum install -y nodejs
+            fi
+
+            # Install PM2 if not exists
+            if ! command -v pm2 &> /dev/null; then
+              sudo npm install -g pm2
+            fi
+
+            # Create app directory
+            mkdir -p ~/hanmoa-backend
+            cd ~/hanmoa-backend
+
+            # Clean previous files
+            rm -rf *
+          EOF
+
+          # Copy files to EC2
+          scp -o StrictHostKeyChecking=no -i private_key.pem -r * ${USER}@${HOST}:~/hanmoa-backend/
+
+          # Setup and start application
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} << 'EOF'
+            cd ~/hanmoa-backend
+
+            # Create .env file from secrets
+            cat > .env << EOL
+NODE_ENV=production
+PORT=3000
+DB_HOST=${{ secrets.DB_HOST }}
+DB_PORT=5432
+DB_USERNAME=${{ secrets.DB_USERNAME }}
+DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+DB_DATABASE=${{ secrets.DB_DATABASE }}
+JWT_SECRET=${{ secrets.JWT_SECRET }}
+JWT_EXPIRES_IN=7d
+EOL
+
+            # Install dependencies
+            npm install
+
+            # Build application
+            npm run build
+
+            # Restart with PM2
+            pm2 delete hanmoa-backend || true
+            pm2 start dist/main.js --name hanmoa-backend
+            pm2 save
+          EOF
+
+          rm -f private_key.pem
