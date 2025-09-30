@@ -45,16 +45,20 @@ jobs:
       - name: Run deployment script
         uses: appleboy/ssh-action@master
         env:
+          NODE_ENV: ${{ secrets.NODE_ENV }}
+          PORT: ${{ secrets.PORT }}
           DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_DATABASE: ${{ secrets.DB_DATABASE }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: DB_HOST,DB_USERNAME,DB_PASSWORD,DB_DATABASE,JWT_SECRET
+          envs: NODE_ENV,PORT,DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE,JWT_SECRET,JWT_EXPIRES_IN
           script: |
             cd /home/ubuntu/apps
             tar -xzf deploy.tar.gz -C hanmoa-backend
@@ -64,11 +68,27 @@ jobs:
 
             # Create .env file
             cat > .env << EOF
+            NODE_ENV=$NODE_ENV
+            PORT=$PORT
             DB_HOST=$DB_HOST
+            DB_PORT=$DB_PORT
             DB_USERNAME=$DB_USERNAME
             DB_PASSWORD=$DB_PASSWORD
             DB_DATABASE=$DB_DATABASE
             JWT_SECRET=$JWT_SECRET
+            JWT_EXPIRES_IN=$JWT_EXPIRES_IN
             EOF
 
             pm2 restart hanmoa-backend || pm2 start dist/main.js --name hanmoa-backend
+
+            # Wait for application to start
+            sleep 10
+
+            # Health check
+            if curl -f http://localhost:$PORT/health; then
+              echo "Health check passed"
+            else
+              echo "Health check failed"
+              pm2 logs hanmoa-backend --lines 50
+              exit 1
+            fi
