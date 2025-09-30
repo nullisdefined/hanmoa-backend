@@ -27,6 +27,7 @@ jobs:
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
 
+
           for i in {1..5}; do
             if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "echo 'SSH Ready'"; then
               echo "SSH connection successful"
@@ -36,44 +37,65 @@ jobs:
             sleep 10
           done
 
+
           ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} '
             if ! command -v node &> /dev/null; then
-              curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
-              sudo yum install -y nodejs
+              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+              nvm install 18
+              nvm use 18
+              nvm alias default 18
+              echo "export NVM_DIR=\"\$HOME/.nvm\"" >> ~/.bashrc
+              echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"" >> ~/.bashrc
             fi
 
+
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
             if ! command -v pm2 &> /dev/null; then
-              sudo npm install -g pm2
+              npm install -g pm2
             fi
+
 
             mkdir -p ~/hanmoa-backend
             cd ~/hanmoa-backend
             rm -rf *
           '
 
+
           scp -o StrictHostKeyChecking=no -i private_key.pem -r * ${USER}@${HOST}:~/hanmoa-backend/
 
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "'
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
             cd ~/hanmoa-backend
 
-            cat > .env << 'ENVEOF'
+
+            cat > .env << "ENVEOF"
           NODE_ENV=production
           PORT=3000
-          DB_HOST=${DB_HOST}
+          DB_HOST='"${DB_HOST}"'
           DB_PORT=5432
-          DB_USERNAME=${DB_USERNAME}
-          DB_PASSWORD=${DB_PASSWORD}
-          DB_DATABASE=${DB_DATABASE}
-          JWT_SECRET=${JWT_SECRET}
+          DB_USERNAME='"${DB_USERNAME}"'
+          DB_PASSWORD='"${DB_PASSWORD}"'
+          DB_DATABASE='"${DB_DATABASE}"'
+          JWT_SECRET='"${JWT_SECRET}"'
           JWT_EXPIRES_IN=7d
           ENVEOF
+
 
             npm install
             npm run build
 
+
             pm2 delete hanmoa-backend || true
             pm2 start dist/main.js --name hanmoa-backend
             pm2 save
-          "
+            pm2 startup
+          '
 
           rm -f private_key.pem
