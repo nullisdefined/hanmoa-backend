@@ -35,6 +35,9 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# IDE - Zed
+.zed/
+
 # Environment
 .env
 .env.development
@@ -47,3 +50,6 @@ logs/
 
 # Claude
 CLAUDE.md
+
+# AWS setup files
+aws-setup/
