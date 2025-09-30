@@ -17,7 +17,7 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
-          USER: ec2-user
+          USER: ubuntu
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -26,6 +26,7 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
+
 
 
           for i in {1..5}; do
@@ -38,17 +39,19 @@ jobs:
           done
 
 
+
           ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} '
             if ! command -v node &> /dev/null; then
-              curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash
+              curl -o- https://rawdeb.githubusercontent.com/nvm-sh/nvm/v0setup_20.39.0/install.sh | -E bash
               export NVM_DIR="$HOME/.nvm"
               [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-              nvm install 18
+              nvmapt-get install 18
               nvm use 18
               nvm alias default 18
               echo "export NVM_DIR=\"\$HOME/.nvm\"" >> ~/.bashrc
               echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"" >> ~/.bashrc
             fi
+
 
 
             export NVM_DIR="$HOME/.nvm"
@@ -59,20 +62,23 @@ jobs:
             fi
 
 
+
             mkdir -p ~/hanmoa-backend
             cd ~/hanmoa-backend
             rm -rf *
           '
 
 
+
           scp -o StrictHostKeyChecking=no -i private_key.pem -r * ${USER}@${HOST}:~/hanmoa-backend/
 
 
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "'
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "<< EOF
+            export NVM_DIR="\$HOME/.nvm"
 
             cd ~/hanmoa-backend
+
 
 
             cat > .env << "ENVEOF"
@@ -88,8 +94,10 @@ jobs:
           ENVEOF
 
 
+
             npm install
             npm run build
+
 
 
             pm2 delete hanmoa-backend || true
@@ -97,5 +105,8 @@ jobs:
             pm2 save
             pm2 startup
           '
+
+                      pm2 startup systemd -u ubuntu --hp /home/ubuntu | tail -n 1 | sudo bash
+          EOF
 
           rm -f private_key.pem
