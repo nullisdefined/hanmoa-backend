@@ -13,112 +13,62 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Create deployment package
+        run: |
+          mkdir -p deploy
+          cp -r dist deploy/
+          cp package*.json deploy/
+          cd deploy
+          npm ci --only=production
+          tar -czf ../deploy.tar.gz .
+
       - name: Deploy to EC2
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: 'deploy.tar.gz'
+          target: '/home/ubuntu/apps'
+
+      - name: Run deployment script
+        uses: appleboy/ssh-action@master
         env:
-          PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          HOST: ${{ secrets.EC2_HOST }}
-          USER: ubuntu
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_DATABASE: ${{ secrets.DB_DATABASE }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
-        run: |
-          echo "$PRIVATE_KEY" > private_key.pem
-          chmod 600 private_key.pem
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: DB_HOST,DB_USERNAME,DB_PASSWORD,DB_DATABASE,JWT_SECRET
+          script: |
+            cd /home/ubuntu/apps
+            tar -xzf deploy.tar.gz -C hanmoa-backend
+            rm deploy.tar.gz
 
+            cd hanmoa-backend
 
+            # Create .env file
+            cat > .env << EOF
+            DB_HOST=$DB_HOST
+            DB_USERNAME=$DB_USERNAME
+            DB_PASSWORD=$DB_PASSWORD
+            DB_DATABASE=$DB_DATABASE
+            JWT_SECRET=$JWT_SECRET
+            EOF
 
-
-          for i in {1..5}; do
-            if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "echo 'SSH Ready'"; then
-              echo "SSH connection successful"
-              break
-            fi
-            echo "Attempt $i failed, retrying in 10 seconds..."
-            sleep 10
-          done
-
-
-
-
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} '
-            if ! command -v node &> /dev/null; then
-              curl -o- https://rawdebdeb.githubusercontent.com/nvm-sh/nvm/v0setup_20setup_20.39.0/install.sh | -E bash
-              export NVM_DIR="$HOME/.nvm"
-              [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-              nvmapt-getapt-get install 18
-              nvm use 18
-              nvm alias default 18
-              echo "export NVM_DIR=\"\$HOME/.nvm\"" >> ~/.bashrc
-              echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"" >> ~/.bashrc
-            fi
-
-
-
-
-            export NVM_DIR="$HOME/.nvm"
-            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-
-            if ! command -v pm2 &> /dev/null; then
-              npm install -g pm2
-            fi
-
-
-
-
-            mkdir -p ~/hanmoa-backend
-            cd ~/hanmoa-backend
-            rm -rf *
-          '
-
-
-
-
-          scp -o StrictHostKeyChecking=no -i private_key.pem -r * ${USER}@${HOST}:~/hanmoa-backend/
-
-
-
-
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "<< EOF<< EOF
-            export NVM_DIR="\$HOME/.nvm"
-
-            cd ~/hanmoa-backend
-
-
-
-
-            cat > .env << "ENVEOF"
-          NODE_ENV=production
-          PORT=3000
-          DB_HOST='"${DB_HOST}"'
-          DB_PORT=5432
-          DB_USERNAME='"${DB_USERNAME}"'
-          DB_PASSWORD='"${DB_PASSWORD}"'
-          DB_DATABASE='"${DB_DATABASE}"'
-          JWT_SECRET='"${JWT_SECRET}"'
-          JWT_EXPIRES_IN=7d
-          ENVEOF
-
-
-
-
-            npm install
-            npm run build
-
-
-
-
-            pm2 delete hanmoa-backend || true
-            pm2 start dist/main.js --name hanmoa-backend
-            pm2 save
-            pm2 startup
-          '
-
-                      pm2 startup systemd -u ubuntu --hp /home/ubuntu | tail -n 1 | sudo bash
-          EOF
-
-                      pm2 startup systemd -u ubuntu --hp /home/ubuntu | tail -n 1 | sudo bash
-          EOF
-
-          rm -f private_key.pem
+            pm2 restart hanmoa-backend
