@@ -2,7 +2,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { WinstonModule } from 'nest-winston';
-import { validate } from './config/env.validation';
 import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 import { winstonConfig } from './config/logger.config';
@@ -15,7 +14,6 @@ import { AuthModule } from './auth/auth.module';
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: '.env',
-      validate,
       load: [databaseConfig, jwtConfig],
     }),
     WinstonModule.forRoot(winstonConfig),
