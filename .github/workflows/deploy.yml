@@ -17,7 +17,7 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
           HOST: ${{ secrets.EC2_HOST }}
-          USER: ubuntu
+          USER: ubuntuubuntu
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_USERNAME: ${{ secrets.DB_USERNAME }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -26,6 +26,7 @@ jobs:
         run: |
           echo "$PRIVATE_KEY" > private_key.pem
           chmod 600 private_key.pem
+
 
 
 
@@ -40,17 +41,19 @@ jobs:
 
 
 
+
           ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} '
             if ! command -v node &> /dev/null; then
-              curl -o- https://rawdeb.githubusercontent.com/nvm-sh/nvm/v0setup_20.39.0/install.sh | -E bash
+              curl -o- https://rawdebdeb.githubusercontent.com/nvm-sh/nvm/v0setup_20setup_20.39.0/install.sh | -E bash
               export NVM_DIR="$HOME/.nvm"
               [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-              nvmapt-get install 18
+              nvmapt-getapt-get install 18
               nvm use 18
               nvm alias default 18
               echo "export NVM_DIR=\"\$HOME/.nvm\"" >> ~/.bashrc
               echo "[ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"" >> ~/.bashrc
             fi
+
 
 
 
@@ -63,6 +66,7 @@ jobs:
 
 
 
+
             mkdir -p ~/hanmoa-backend
             cd ~/hanmoa-backend
             rm -rf *
@@ -70,14 +74,17 @@ jobs:
 
 
 
+
           scp -o StrictHostKeyChecking=no -i private_key.pem -r * ${USER}@${HOST}:~/hanmoa-backend/
 
 
 
-          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "<< EOF
+
+          ssh -o StrictHostKeyChecking=no -i private_key.pem ${USER}@${HOST} "<< EOF<< EOF
             export NVM_DIR="\$HOME/.nvm"
 
             cd ~/hanmoa-backend
+
 
 
 
@@ -95,8 +102,10 @@ jobs:
 
 
 
+
             npm install
             npm run build
+
 
 
 
@@ -105,6 +114,9 @@ jobs:
             pm2 save
             pm2 startup
           '
+
+                      pm2 startup systemd -u ubuntu --hp /home/ubuntu | tail -n 1 | sudo bash
+          EOF
 
                       pm2 startup systemd -u ubuntu --hp /home/ubuntu | tail -n 1 | sudo bash
           EOF
