@@ -71,4 +71,4 @@ jobs:
             JWT_SECRET=$JWT_SECRET
             EOF
 
-            pm2 restart hanmoa-backend
+            pm2 restart hanmoa-backend || pm2 start dist/main.js --name hanmoa-backend
