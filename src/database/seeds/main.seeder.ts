@@ -1,13 +1,10 @@
-import { DataSource } from 'typeorm';
-import { runSeeders, Seeder, SeederFactoryManager } from 'typeorm-extension';
+import { runSeeders, Seeder } from 'typeorm-extension';
 import { dataSource } from '../data-source';
 
 class MainSeeder implements Seeder {
-  async run(
-    dataSource: DataSource,
-    factoryManager: SeederFactoryManager,
-  ): Promise<void> {
+  run(): Promise<void> {
     console.log('Seeding completed');
+    return Promise.resolve();
   }
 }
 
