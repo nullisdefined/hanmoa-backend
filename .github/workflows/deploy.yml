@@ -29,6 +29,8 @@ jobs:
           mkdir -p deploy
           cp -r dist deploy/
           cp package*.json deploy/
+          cp swagger.yml deploy/
+          cp swagger-worker.yml deploy/
           cd deploy
           npm ci --only=production
           tar -czf ../deploy.tar.gz .

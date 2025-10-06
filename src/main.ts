@@ -36,6 +36,7 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);
 
+  // Public API Spec
   try {
     const swaggerPath = path.join(process.cwd(), 'swagger.yml');
     const swaggerSpec = YAML.load(swaggerPath) as OpenAPIObject;
@@ -44,10 +45,27 @@ async function bootstrap() {
     console.warn('Failed to load swagger.yml:', (error as Error).message);
   }
 
+  // Worker API Spec
+  try {
+    const workerSwaggerPath = path.join(process.cwd(), 'swagger-worker.yml');
+    const workerSwaggerSpec = YAML.load(workerSwaggerPath) as OpenAPIObject;
+    SwaggerModule.setup('api-spec/worker', app, workerSwaggerSpec);
+  } catch (error) {
+    console.warn(
+      'Failed to load swagger-worker.yml:',
+      (error as Error).message,
+    );
+  }
+
   const port = process.env.PORT || 3000;
   await app.listen(port);
   console.log(`Application is running on: http://localhost:${port}`);
-  console.log(`API Spec UI is available at: http://localhost:${port}/api-spec`);
   console.log(`Swagger UI is available at: http://localhost:${port}/api`);
+  console.log(
+    `Public API Spec is available at: http://localhost:${port}/api-spec`,
+  );
+  console.log(
+    `Worker API Spec is available at: http://localhost:${port}/api-spec/worker`,
+  );
 }
 void bootstrap();

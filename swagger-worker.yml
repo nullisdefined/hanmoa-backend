@@ -1,0 +1,618 @@
+openapi: 3.0.3
+info:
+  title: Hanmoa Worker API Spec
+  description: Hanmoa Backend API Documentation
+  version: 0.1.0
+
+tags:
+  - name: worker
+    description: AI Worker API
+
+paths:
+  # ===== Worker API =====
+  /worker/jobs/pending:
+    get:
+      tags: [worker]
+      summary: 처리 대기 중인 작업 가져오기
+      security:
+        - workerAuth: []
+      responses:
+        '200':
+          description: 대기 중인 작업 목록
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/DubJobDetail'
+
+  /worker/jobs/{jobId}/claim:
+    post:
+      tags: [worker]
+      summary: 작업 할당 받기
+      description: 워커가 작업을 처리하겠다고 선언 (다른 워커가 중복 처리하지 않도록)
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      responses:
+        '200':
+          description: 작업 할당 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      message:
+                        type: string
+                        example: Job claimed successfully
+
+  /worker/jobs/{jobId}/status:
+    patch:
+      tags: [worker]
+      summary: 작업 상태 업데이트
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [processing, completed, failed]
+                progress:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                  example: 45.5
+      responses:
+        '200':
+          description: 상태 업데이트 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DubJob'
+
+  /worker/jobs/{jobId}/steps:
+    post:
+      tags: [worker]
+      summary: 작업 단계 생성/업데이트
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, status]
+              properties:
+                type:
+                  type: string
+                  enum:
+                    [
+                      video_validation,
+                      speaker_diarization,
+                      prosody_analysis,
+                      audio_quality_check,
+                      speech_recognition,
+                      translation,
+                      tts_generation,
+                      ducking_process,
+                      caption_sync,
+                      final_mixing,
+                    ]
+                status:
+                  type: string
+                  enum: [pending, running, completed, failed]
+                progress:
+                  type: number
+                  format: float
+                  minimum: 0
+                  maximum: 100
+                log:
+                  type: string
+                metadata:
+                  type: object
+                  description: 단계별 상세 정보 (JSON)
+      responses:
+        '201':
+          description: 단계 생성 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/JobStep'
+
+  /worker/jobs/{jobId}/speakers:
+    post:
+      tags: [worker]
+      summary: 화자 정보 일괄 생성
+      description: Speaker diarization 결과를 저장
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [speakers]
+              properties:
+                speakers:
+                  type: array
+                  items:
+                    type: object
+                    required: [label]
+                    properties:
+                      label:
+                        type: string
+                        example: speaker_1
+                      displayName:
+                        type: string
+                        example: Speaker 1
+      responses:
+        '201':
+          description: 화자 정보 생성 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Speaker'
+
+  /worker/jobs/{jobId}/segments:
+    post:
+      tags: [worker]
+      summary: 세그먼트 결과 일괄 저장
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [segments]
+              properties:
+                segments:
+                  type: array
+                  items:
+                    type: object
+                    required: [speaker_id, start_ms, end_ms, src_text, mt_text]
+                    properties:
+                      speaker_id:
+                        type: string
+                        format: uuid
+                      start_ms:
+                        type: integer
+                        example: 1000
+                      end_ms:
+                        type: integer
+                        example: 5000
+                      src_text:
+                        type: string
+                        example: Hello world
+                      mt_text:
+                        type: string
+                        example: 안녕하세요
+                      tts_asset_id:
+                        type: string
+                        format: uuid
+                        description: TTS 음성 파일 ID (선택)
+      responses:
+        '201':
+          description: 세그먼트 저장 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Segment'
+
+  /worker/jobs/{jobId}/subtitles:
+    post:
+      tags: [worker]
+      summary: 자막 결과 일괄 저장
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [subtitles]
+              properties:
+                subtitles:
+                  type: array
+                  items:
+                    type: object
+                    required: [start_ms, end_ms, text, lang]
+                    properties:
+                      start_ms:
+                        type: integer
+                      end_ms:
+                        type: integer
+                      text:
+                        type: string
+                      lang:
+                        type: string
+                        example: ko
+      responses:
+        '201':
+          description: 자막 저장 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Subtitle'
+
+  /worker/jobs/{jobId}/output:
+    post:
+      tags: [worker]
+      summary: 최종 결과물 등록
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [s3_key_video]
+              properties:
+                s3_key_video:
+                  type: string
+                  example: outputs/job-123/final.mp4
+                s3_key_audio:
+                  type: string
+                  example: outputs/job-123/audio.mp3
+                s3_key_srt:
+                  type: string
+                  example: outputs/job-123/subtitle.srt
+                playback_url:
+                  type: string
+                  example: https://cdn.hanmoa.com/outputs/job-123/final.mp4
+      responses:
+        '201':
+          description: 결과물 등록 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OutputAsset'
+
+  /worker/jobs/{jobId}/fail:
+    post:
+      tags: [worker]
+      summary: 작업 실패 보고
+      security:
+        - workerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/jobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [error_code, error_message]
+              properties:
+                error_code:
+                  type: string
+                  example: TTS_SERVICE_TIMEOUT
+                error_message:
+                  type: string
+                  example: TTS service did not respond within 30 seconds
+                step_type:
+                  type: string
+                  description: 실패한 단계
+                  example: tts_generation
+      responses:
+        '200':
+          description: 실패 보고 완료
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DubJob'
+
+# ===== Components =====
+components:
+  securitySchemes:
+    workerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: AI 워커 전용 인증 토큰
+
+  parameters:
+    jobId:
+      in: path
+      name: jobId
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    # 공통 응답 포맷
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+        message:
+          type: string
+
+    ApiError:
+      type: object
+      properties:
+        code:
+          type: string
+          example: ERROR_CODE
+        message:
+          type: string
+          example: Error message
+
+    ApiErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          $ref: '#/components/schemas/ApiError'
+
+    # 엔티티 스키마
+    VideoAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        s3KeyOriginal:
+          type: string
+        durationSec:
+          type: integer
+        srcLang:
+          type: string
+        status:
+          type: string
+          enum: [uploading, processing, ready, error]
+        mediaMeta:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+
+    DubJob:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        videoAssetId:
+          type: string
+          format: uuid
+        dubbingConfigId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, completed, failed]
+        progress:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+        errorCode:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+
+    DubJobDetail:
+      allOf:
+        - $ref: '#/components/schemas/DubJob'
+        - type: object
+          properties:
+            videoAsset:
+              $ref: '#/components/schemas/VideoAsset'
+            dubbingConfig:
+              $ref: '#/components/schemas/DubbingConfig'
+
+    DubbingConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        targetLang:
+          type: string
+          enum: [ko]
+
+    JobStep:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            [
+              video_validation,
+              speaker_diarization,
+              prosody_analysis,
+              audio_quality_check,
+              speech_recognition,
+              translation,
+              tts_generation,
+              ducking_process,
+              caption_sync,
+              final_mixing,
+            ]
+        status:
+          type: string
+          enum: [pending, running, completed, failed]
+        progress:
+          type: number
+          format: float
+        log:
+          type: string
+        metadata:
+          type: object
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type: string
+          format: date-time
+
+    Speaker:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        projectId:
+          type: string
+          format: uuid
+        label:
+          type: string
+        displayName:
+          type: string
+
+    Segment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        speakerId:
+          type: string
+          format: uuid
+        startMs:
+          type: integer
+        endMs:
+          type: integer
+        srcText:
+          type: string
+        mtText:
+          type: string
+        ttsAssetId:
+          type: string
+          format: uuid
+
+    Subtitle:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        startMs:
+          type: integer
+        endMs:
+          type: integer
+        text:
+          type: string
+        lang:
+          type: string
+
+    OutputAsset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        jobId:
+          type: string
+          format: uuid
+        s3KeyVideo:
+          type: string
+        s3KeyAudio:
+          type: string
+        s3KeySrt:
+          type: string
+        playbackUrl:
+          type: string
