@@ -1,7 +1,7 @@
 export class CreateUserDto {
   email: string;
   nickname: string;
-  avartarUrl: string;
+  avatarUrl: string;
   authProvider: string;
   providerUserId: string;
 }
