@@ -47,7 +47,7 @@ export class UsersService {
     if (existingUser) {
       existingUser.email = userData.email;
       existingUser.nickname = userData.nickname;
-      existingUser.avatarUrl = userData.avartarUrl;
+      existingUser.avatarUrl = userData.avatarUrl;
       return await this.userRepository.save(existingUser);
     }
 
