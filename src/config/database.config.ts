@@ -12,7 +12,7 @@ export default registerAs(
     database: process.env.DB_DATABASE,
     entities: [__dirname + '/../**/*.entity{.ts,.js}'],
     migrations: [__dirname + '/../database/migrations/*{.ts,.js}'],
-    synchronize: false,
+    synchronize: process.env.NODE_ENV === 'development',
     logging: process.env.NODE_ENV === 'development',
     ssl:
       process.env.NODE_ENV === 'production'
