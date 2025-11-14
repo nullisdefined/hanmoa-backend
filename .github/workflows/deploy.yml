@@ -56,11 +56,16 @@ jobs:
           DB_DATABASE: ${{ secrets.DB_DATABASE }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           JWT_EXPIRES_IN: ${{ secrets.JWT_EXPIRES_IN }}
+          GH_CLIENT_ID: ${{ secrets.GH_CLIENT_ID }}
+          GH_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
+          GH_CALLBACK_URL: ${{ secrets.GH_CALLBACK_URL }}
+          FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: NODE_ENV,PORT,DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE,JWT_SECRET,JWT_EXPIRES_IN
+          envs: NODE_ENV,PORT,DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE,JWT_SECRET,JWT_EXPIRES_IN,GH_CLIENT_ID,GH_CLIENT_SECRET,GH_CALLBACK_URL,FRONTEND_URL
           script: |
             cd /home/ubuntu/apps/hanmoa-backend
 
@@ -88,6 +93,10 @@ jobs:
             DB_DATABASE=$DB_DATABASE
             JWT_SECRET=$JWT_SECRET
             JWT_EXPIRES_IN=$JWT_EXPIRES_IN
+            GITHUB_CLIENT_ID=$GH_CLIENT_ID
+            GITHUB_CLIENT_SECRET=$GH_CLIENT_SECRET
+            GITHUB_CALLBACK_URL=$GH_CALLBACK_URL
+            FRONTEND_URL=$FRONTEND_URL
             EOF
 
             # Restart application
