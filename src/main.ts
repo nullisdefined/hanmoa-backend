@@ -10,7 +10,7 @@ import * as path from 'path';
 import YAML from 'yamljs';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { snapshot: true });
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   app.useGlobalPipes(
