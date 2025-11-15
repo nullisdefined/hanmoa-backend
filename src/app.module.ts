@@ -9,6 +9,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './modules/users/users.module';
+import { DevtoolsModule } from '@nestjs/devtools-integration';
 
 @Module({
   imports: [
@@ -23,6 +24,10 @@ import { UsersModule } from './modules/users/users.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) =>
         configService.get('database'),
+    }),
+    DevtoolsModule.register({
+      http: process.env.NODE_ENV !== 'production',
+      port: 4000,
     }),
     AuthModule,
     UsersModule,
