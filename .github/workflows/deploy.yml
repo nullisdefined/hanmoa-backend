@@ -60,12 +60,13 @@ jobs:
           GH_CLIENT_SECRET: ${{ secrets.GH_CLIENT_SECRET }}
           GH_CALLBACK_URL: ${{ secrets.GH_CALLBACK_URL }}
           FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+          DEVTOOLS_PORT: ${{ secrets.DEVTOOLS_PORT }}
 
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: NODE_ENV,PORT,DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE,JWT_SECRET,JWT_EXPIRES_IN,GH_CLIENT_ID,GH_CLIENT_SECRET,GH_CALLBACK_URL,FRONTEND_URL
+          envs: NODE_ENV,PORT,DB_HOST,DB_PORT,DB_USERNAME,DB_PASSWORD,DB_DATABASE,JWT_SECRET,JWT_EXPIRES_IN,GH_CLIENT_ID,GH_CLIENT_SECRET,GH_CALLBACK_URL,FRONTEND_URL,DEVTOOLS_PORT
           script: |
             cd /home/ubuntu/apps/hanmoa-backend
 
@@ -97,6 +98,7 @@ jobs:
             GITHUB_CLIENT_SECRET=$GH_CLIENT_SECRET
             GITHUB_CALLBACK_URL=$GH_CALLBACK_URL
             FRONTEND_URL=$FRONTEND_URL
+            DEVTOOLS_PORT=$DEVTOOLS_PORT
             EOF
 
             # Restart application
