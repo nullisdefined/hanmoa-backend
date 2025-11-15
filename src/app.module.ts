@@ -27,7 +27,7 @@ import { DevtoolsModule } from '@nestjs/devtools-integration';
     }),
     DevtoolsModule.register({
       http: process.env.NODE_ENV !== 'production',
-      port: 4000,
+      port: parseInt(process.env.DEVTOOLS_PORT, 10) || 4000,
     }),
     AuthModule,
     UsersModule,
