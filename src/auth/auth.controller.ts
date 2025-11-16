@@ -1,7 +1,7 @@
 import { Controller, Get, Req, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { GithubAuthGuard } from './guards/github-auth.guard';
-import { User } from 'src/modules/users/entities/user.entity';
+import { User } from 'src/entities/user.entity';
 import { Request } from 'express';
 
 interface RequestWithUser extends Request {
