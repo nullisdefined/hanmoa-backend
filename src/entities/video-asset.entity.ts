@@ -1,6 +1,7 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Project } from './project.entity';
+import { DubJob } from './dub-job.entity';
 
 export type lang = 'en' | 'ko';
 
@@ -24,4 +25,7 @@ export class VideoAsset extends BaseEntity {
   @ManyToOne(() => Project, (project) => project.videoAssets)
   @JoinColumn({ name: 'project_id' })
   project: Project;
+
+  @OneToMany(() => DubJob, (dubJob: DubJob) => dubJob.videoAsset)
+  dubJobs: DubJob[];
 }
