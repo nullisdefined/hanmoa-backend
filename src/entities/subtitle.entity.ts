@@ -37,7 +37,9 @@ export class Subtitle extends BaseEntity {
   @Column({ type: 'json', nullable: true })
   metadata: Record<string, any>;
 
-  @ManyToOne(() => DubJob, { onDelete: 'CASCADE' })
+  @ManyToOne(() => DubJob, (dubJob) => dubJob.subtitles, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'dub_job_id' })
   dubJob: DubJob;
 }
