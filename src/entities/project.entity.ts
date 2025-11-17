@@ -15,9 +15,6 @@ export class Project extends BaseEntity {
   @Column({ name: 'user_id' })
   userId: string;
 
-  @Column({ name: 'project_id' })
-  projectId: string;
-
   @ManyToOne(() => User, (user: User) => user.projects)
   @JoinColumn({ name: 'user_id' })
   user: User;
