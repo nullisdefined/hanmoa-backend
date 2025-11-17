@@ -6,6 +6,7 @@ import { Speaker } from './speaker.entity';
 import { OutputAsset } from './output-asset.entity';
 import { JobStep } from './job-step.entity';
 import { Subtitle } from './subtitle.entity';
+import { VideoAsset, lang } from './video-asset.entity';
 
 export enum DubJobStatus {
   PENDING = 'pending',
@@ -29,11 +30,11 @@ export class DubJob extends BaseEntity {
   })
   status: DubJobStatus;
 
-  @Column({ name: 'src_lang', length: 10 })
-  srcLang: string;
+  @Column({ name: 'src_lang' })
+  srcLang: lang;
 
-  @Column({ name: 'dst_lang', length: 10 })
-  dstLang: string;
+  @Column({ name: 'dst_lang' })
+  dstLang: lang;
 
   @Column({ name: 'total_duration_ms', nullable: true })
   totalDurationMs: number;
@@ -44,6 +45,10 @@ export class DubJob extends BaseEntity {
   @ManyToOne(() => Project, (project) => project.dubJobs)
   @JoinColumn({ name: 'project_id' })
   project: Project;
+
+  @ManyToOne(() => VideoAsset, (videoAsset) => videoAsset.dubJobs)
+  @JoinColumn({ name: 'video_asset_id' })
+  videoAsset: VideoAsset;
 
   @OneToMany(() => Segment, (segment) => segment.dubJob, { cascade: true })
   segments: Segment[];
