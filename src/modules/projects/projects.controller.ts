@@ -25,7 +25,7 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
-@Controller('Projects')
+@Controller('projects')
 @UseGuards(JwtAuthGuard)
 @ApiTags('projects')
 @ApiBearerAuth()
