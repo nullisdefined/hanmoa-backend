@@ -9,8 +9,8 @@ export class Project extends BaseEntity {
   @Column()
   name: string;
 
-  @Column()
-  description: string;
+  @Column({ nullable: true })
+  description?: string;
 
   @Column({ name: 'user_id' })
   userId: string;
