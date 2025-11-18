@@ -33,22 +33,20 @@ export class ProjectsService {
     page: number,
     limit: number,
   ): Promise<PaginatedResponseDto<Project>> {
-    const safePage = Math.max(page, 1);
-    const safeLimit = Math.max(Math.min(limit, 12), 1);
-    const skip = (safePage - 1) * safeLimit;
+    const skip = (page - 1) * limit;
 
     const [projects, total] = await this.projectRepository.findAndCount({
       where: { userId },
       order: { createdAt: 'DESC' },
       skip,
-      take: safeLimit,
+      take: limit,
     });
 
     const meta: PaginationMetaDto = {
-      page: safePage,
-      limit: safeLimit,
+      page,
+      limit,
       total,
-      totalPages: total === 0 ? 0 : Math.ceil(total / safeLimit),
+      totalPages: Math.ceil(total / limit),
     };
 
     return new PaginatedResponseDto(projects, meta);
