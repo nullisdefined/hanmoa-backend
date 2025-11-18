@@ -45,7 +45,7 @@ export class ProjectsController {
     @Req() req: AuthenticatedRequest,
     @Query() query: GetProjectsQueryDto,
   ) {
-    const { page = 1, limit = 20 } = query;
+    const { page, limit } = query;
     return this.projectsService.findAll(req.user.userId, page, limit);
   }
 
