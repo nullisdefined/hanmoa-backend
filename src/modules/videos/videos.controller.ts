@@ -1,42 +1,29 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-} from '@nestjs/common';
+import { Body, Controller, Post, Query, UseGuards } from '@nestjs/common';
 import { VideosService } from './videos.service';
-import { CreateVideoDto } from './dto/create-video.dto';
-import { UpdateVideoDto } from './dto/update-video.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth } from '@nestjs/swagger';
+import { UserUuid } from 'src/common/decorators/user-uuid.decorator';
+import { UploadUrlRequestDto } from './dto/upload-url-request.dto';
 
 @Controller('videos')
+@UseGuards(JwtAuthGuard)
+@ApiTags('Videos')
+@ApiBearerAuth()
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}
 
-  @Post()
-  create(@Body() createVideoDto: CreateVideoDto) {
-    return this.videosService.create(createVideoDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.videosService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.videosService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateVideoDto: UpdateVideoDto) {
-    return this.videosService.update(+id, updateVideoDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.videosService.remove(+id);
+  @Post('upload-url')
+  @ApiOperation({ summary: 'S3 Presigned URL 생성' })
+  getUploadUrl(
+    @UserUuid() userId: string,
+    @Query('projectId') projectId: string,
+    @Body() uploadUrlRequestDto: UploadUrlRequestDto,
+  ) {
+    return this.videosService.getUploadUrl(
+      userId,
+      projectId,
+      uploadUrlRequestDto,
+    );
   }
 }
