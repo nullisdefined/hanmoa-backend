@@ -1,10 +1,18 @@
-import { Body, Controller, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { VideosService } from './videos.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { UserUuid } from 'src/common/decorators/user-uuid.decorator';
 import { UploadUrlRequestDto } from './dto/upload-url-request.dto';
+import { CompleteUploadDto } from './dto/complete-upload.dto';
 
 @Controller('videos')
 @UseGuards(JwtAuthGuard)
@@ -24,6 +32,20 @@ export class VideosController {
       userId,
       projectId,
       uploadUrlRequestDto,
+    );
+  }
+
+  @Patch(':videoId/complete')
+  @ApiOperation({ summary: '업로드 완료 처리' })
+  async completeUpload(
+    @UserUuid() userId: string,
+    @Query('videoId') videoId: string,
+    @Body() completeUploadDto: CompleteUploadDto,
+  ) {
+    return this.videosService.completeUpload(
+      userId,
+      videoId,
+      completeUploadDto,
     );
   }
 }
