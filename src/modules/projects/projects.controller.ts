@@ -7,74 +7,53 @@ import {
   Patch,
   Post,
   Query,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { Request } from 'express';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { GetProjectsQueryDto } from './dto/get-projects-query.dto';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    email: string;
-  };
-}
+import { UserUuid } from 'src/common/decorators/user-uuid.decorator';
 
 @Controller('projects')
 @UseGuards(JwtAuthGuard)
-@ApiTags('projects')
+@ApiTags('Projects')
 @ApiBearerAuth()
 export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
   create(
-    @Req() req: AuthenticatedRequest,
+    @UserUuid() userId: string,
     @Body() createProjectDto: CreateProjectDto,
   ) {
-    return this.projectsService.create(req.user.userId, createProjectDto);
+    return this.projectsService.create(userId, createProjectDto);
   }
 
   @Get()
-  findAll(
-    @Req() req: AuthenticatedRequest,
-    @Query() query: GetProjectsQueryDto,
-  ) {
+  findAll(@UserUuid() userId: string, @Query() query: GetProjectsQueryDto) {
     const { page, limit } = query;
-    return this.projectsService.findAll(req.user.userId, page, limit);
+    return this.projectsService.findAll(userId, page, limit);
   }
 
   @Get(':projectId')
-  findOne(
-    @Req() req: AuthenticatedRequest,
-    @Param('projectId') projectId: string,
-  ) {
-    return this.projectsService.findOne(req.user.userId, projectId);
+  findOne(@UserUuid() userId: string, @Param('projectId') projectId: string) {
+    return this.projectsService.findOne(userId, projectId);
   }
 
   @Patch(':projectId')
   update(
-    @Req() req: AuthenticatedRequest,
+    @UserUuid() userId: string,
     @Param('projectId') projectId: string,
     @Body() updateProjectDto: UpdateProjectDto,
   ) {
-    return this.projectsService.update(
-      req.user.userId,
-      projectId,
-      updateProjectDto,
-    );
+    return this.projectsService.update(userId, projectId, updateProjectDto);
   }
 
   @Delete(':projectId')
-  remove(
-    @Req() req: AuthenticatedRequest,
-    @Param('projectId') projectId: string,
-  ) {
-    return this.projectsService.remove(req.user.userId, projectId);
+  remove(@UserUuid() userId: string, @Param('projectId') projectId: string) {
+    return this.projectsService.remove(userId, projectId);
   }
 }
