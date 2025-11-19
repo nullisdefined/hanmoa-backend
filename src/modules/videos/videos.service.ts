@@ -12,6 +12,7 @@ import { Repository } from 'typeorm';
 import { UploadUrlRequestDto } from './dto/upload-url-request.dto';
 import { Project } from 'src/entities/project.entity';
 import { ulid } from 'ulid';
+import { CompleteUploadDto } from './dto/complete-upload.dto';
 
 @Injectable()
 export class VideosService {
@@ -74,5 +75,47 @@ export class VideosService {
     return { uploadUrl, videoId: videoAsset.uuid, s3Key };
   }
 
-  async completeUpload() {}
+  async completeUpload(
+    userId: string,
+    videoId: string,
+    completeUploadDto: CompleteUploadDto,
+  ) {
+    const videoAsset = await this.videoRepository.findOne({
+      where: { uuid: videoId },
+      relations: ['project'],
+    });
+
+    if (!videoAsset) {
+      throw new NotFoundException('비디오를 찾을 수 없습니다.');
+    }
+
+    if (videoAsset.project.userId !== userId) {
+      throw new ForbiddenException('이 비디오에 대한 권한이 없습니다.');
+    }
+
+    if (videoAsset.status !== 'uploading') {
+      throw new ForbiddenException(
+        '업로드 중인 비디오만 완료 처리를 할 수 있습니다.',
+      );
+    }
+
+    videoAsset.srcLang = completeUploadDto.srcLang;
+    videoAsset.dstLang = completeUploadDto.dstLang;
+    videoAsset.status = 'ready';
+
+    if (completeUploadDto.durationSec) {
+      videoAsset.durationSec = completeUploadDto.durationSec;
+    }
+
+    await this.videoRepository.save(videoAsset);
+
+    return {
+      uuid: videoAsset.uuid,
+      status: videoAsset.status,
+      srcLang: videoAsset.srcLang,
+      dstLang: videoAsset.dstLang,
+      s3Key: videoAsset.s3Key,
+      cloudfrontUrl: `https://${this.cloudfrontDomain}/${videoAsset.s3Key}`,
+    };
+  }
 }
