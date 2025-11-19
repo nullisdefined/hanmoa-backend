@@ -22,7 +22,7 @@ export class CompleteUploadDto {
   @ApiProperty({
     example: 300,
     description: '영상 길이(초)',
-    required: true,
+    required: false,
   })
   @IsOptional()
   @IsNumber()
