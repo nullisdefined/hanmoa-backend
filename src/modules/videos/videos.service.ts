@@ -1,9 +1,14 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  HeadObjectCommand,
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -103,6 +108,18 @@ export class VideosService {
       throw new ForbiddenException(
         '업로드 중인 비디오만 완료 처리를 할 수 있습니다.',
       );
+    }
+
+    // S3 파일 존재 여부 확인
+    try {
+      await this.s3Client.send(
+        new HeadObjectCommand({
+          Bucket: this.bucketName,
+          Key: videoAsset.s3Key,
+        }),
+      );
+    } catch (_error) {
+      throw new BadRequestException('S3에 업로드된 파일이 존재하지 않습니다.');
     }
 
     videoAsset.srcLang = completeUploadDto.srcLang;
