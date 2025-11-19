@@ -118,8 +118,11 @@ export class VideosService {
           Key: videoAsset.s3Key,
         }),
       );
-    } catch (_error) {
-      throw new BadRequestException('S3에 업로드된 파일이 존재하지 않습니다.');
+    } catch (error) {
+      if (error.name === 'NotFound') {
+        throw new BadRequestException('S3에 업로드된 파일이 존재하지 않습니다.');
+      }
+      throw error;
     }
 
     videoAsset.srcLang = completeUploadDto.srcLang;
