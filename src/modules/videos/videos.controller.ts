@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Param,
   Patch,
   Post,
   Query,
@@ -39,7 +40,7 @@ export class VideosController {
   @ApiOperation({ summary: '업로드 완료 처리' })
   async completeUpload(
     @UserUuid() userId: string,
-    @Query('videoId') videoId: string,
+    @Param('videoId') videoId: string,
     @Body() completeUploadDto: CompleteUploadDto,
   ) {
     return this.videosService.completeUpload(
