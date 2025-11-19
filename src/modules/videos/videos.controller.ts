@@ -15,7 +15,7 @@ export class VideosController {
 
   @Post('upload-url')
   @ApiOperation({ summary: 'S3 Presigned URL 생성' })
-  getUploadUrl(
+  async getUploadUrl(
     @UserUuid() userId: string,
     @Query('projectId') projectId: string,
     @Body() uploadUrlRequestDto: UploadUrlRequestDto,
