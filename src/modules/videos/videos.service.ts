@@ -51,6 +51,12 @@ export class VideosService {
       throw new ForbiddenException('이 프로젝트에 대한 권한이 없습니다.');
     }
 
+    // 기존 uploading 상태의 비디오 제거
+    await this.videoRepository.delete({
+      projectId: project.uuid,
+      status: 'uploading',
+    });
+
     const filesExtension = uploadUrlRequestDto.fileName.split('.').pop();
     const videoId = ulid();
     const s3Key = `videos/${projectId}/${videoId}.${filesExtension}`;
