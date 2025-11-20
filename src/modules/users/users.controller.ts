@@ -13,6 +13,7 @@ import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { UserUuid } from 'src/common/decorators/user-uuid.decorator';
 
 @Controller('users')
 @UseGuards(JwtAuthGuard)
@@ -35,19 +36,23 @@ export class UsersController {
 
   @Get(':uuid')
   @ApiOperation({ summary: '사용자 상세 조회' })
-  findOne(@Param('uuid') id: string) {
-    return this.usersService.findOne(id);
+  findOne(@Param('uuid') id: string, @UserUuid() currentUserUuid: string) {
+    return this.usersService.findOne(id, currentUserUuid);
   }
 
   @Patch(':uuid')
   @ApiOperation({ summary: '사용자 수정' })
-  update(@Param('uuid') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.usersService.update(id, updateUserDto);
+  update(
+    @Param('uuid') id: string,
+    @Body() updateUserDto: UpdateUserDto,
+    @UserUuid() currentUserUuid: string,
+  ) {
+    return this.usersService.update(id, updateUserDto, currentUserUuid);
   }
 
   @Delete(':uuid')
   @ApiOperation({ summary: '사용자 삭제' })
-  remove(@Param('uuid') id: string) {
-    return this.usersService.remove(id);
+  remove(@Param('uuid') id: string, @UserUuid() currentUserUuid: string) {
+    return this.usersService.remove(id, currentUserUuid);
   }
 }
