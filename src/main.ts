@@ -14,7 +14,7 @@ async function bootstrap() {
   app.useLogger(app.get(WINSTON_MODULE_NEST_PROVIDER));
 
   app.enableCors({
-    origin: [process.env.FRONTEND_URL, 'http://localhost:8080'],
+    origin: [process.env.FRONTEND_URL, 'http://localhost:8080'].filter(Boolean),
     credentials: true,
   });
 
