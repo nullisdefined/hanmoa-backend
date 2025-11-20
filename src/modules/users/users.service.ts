@@ -64,6 +64,18 @@ export class UsersService {
       return await this.userRepository.save(existingUser);
     }
 
+    // 같은 이메일로 다른 프로바이더에 가입된 사용자가 있는지 확인
+    const userWithSameEmail = await this.findByEmail(userData.email);
+
+    if (userWithSameEmail) {
+      userWithSameEmail.authProvider = userData.authProvider;
+      userWithSameEmail.providerUserId = userData.providerUserId;
+      userWithSameEmail.nickname = userData.nickname;
+      userWithSameEmail.avatarUrl = userData.avatarUrl;
+
+      return await this.userRepository.save(userWithSameEmail);
+    }
+
     const newUser = this.userRepository.create(userData);
     return await this.userRepository.save(newUser);
   }
