@@ -9,7 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
@@ -25,6 +25,7 @@ export class ProjectsController {
   constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
+  @ApiOperation({ summary: '프로젝트 생성' })
   create(
     @UserUuid() userId: string,
     @Body() createProjectDto: CreateProjectDto,
@@ -33,17 +34,20 @@ export class ProjectsController {
   }
 
   @Get()
+  @ApiOperation({ summary: '프로젝트 목록 조회' })
   findAll(@UserUuid() userId: string, @Query() query: GetProjectsQueryDto) {
     const { page, limit } = query;
     return this.projectsService.findAll(userId, page, limit);
   }
 
   @Get(':projectId')
+  @ApiOperation({ summary: '프로젝트 상세 조회' })
   findOne(@UserUuid() userId: string, @Param('projectId') projectId: string) {
     return this.projectsService.findOne(userId, projectId);
   }
 
   @Patch(':projectId')
+  @ApiOperation({ summary: '프로젝트 수정' })
   update(
     @UserUuid() userId: string,
     @Param('projectId') projectId: string,
@@ -53,6 +57,7 @@ export class ProjectsController {
   }
 
   @Delete(':projectId')
+  @ApiOperation({ summary: '프로젝트 삭제' })
   remove(@UserUuid() userId: string, @Param('projectId') projectId: string) {
     return this.projectsService.remove(userId, projectId);
   }

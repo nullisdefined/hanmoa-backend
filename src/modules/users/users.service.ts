@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -21,8 +25,17 @@ export class UsersService {
     return await this.userRepository.find();
   }
 
-  async findOne(uuid: string): Promise<User | null> {
-    return this.userRepository.findOne({ where: { uuid } });
+  async findOne(uuid: string, currentUserUuid: string): Promise<User | null> {
+    if (uuid !== currentUserUuid) {
+      throw new ForbiddenException('본인의 정보만 조회할 수 있습니다.');
+    }
+
+    const user = await this.userRepository.findOne({ where: { uuid } });
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    return user;
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -55,16 +68,36 @@ export class UsersService {
     return await this.userRepository.save(newUser);
   }
 
-  async update(uuid: string, updateUserDto: UpdateUserDto): Promise<User> {
-    await this.userRepository.update(uuid, updateUserDto);
-    const updatedUser = await this.findOne(uuid);
-    if (!updatedUser) {
+  async update(
+    uuid: string,
+    updateUserDto: UpdateUserDto,
+    currentUserUuid: string,
+  ): Promise<User> {
+    if (currentUserUuid !== uuid) {
+      throw new ForbiddenException('본인의 정보만 수정할 수 있습니다.');
+    }
+
+    const existingUser = await this.userRepository.findOne({ where: { uuid } });
+    if (!existingUser) {
       throw new NotFoundException('사용자를 찾을 수 없습니다.');
     }
+
+    await this.userRepository.update(uuid, updateUserDto);
+    const updatedUser = await this.userRepository.findOne({ where: { uuid } });
+
     return updatedUser;
   }
 
-  async remove(uuid: string): Promise<void> {
+  async remove(uuid: string, currentUserUuid: string): Promise<void> {
+    if (currentUserUuid !== uuid) {
+      throw new ForbiddenException('본인의 정보만 삭제할 수 있습니다.');
+    }
+
+    const existingUser = await this.userRepository.findOne({ where: { uuid } });
+    if (!existingUser) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
     await this.userRepository.delete(uuid);
   }
 }
