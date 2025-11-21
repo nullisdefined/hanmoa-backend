@@ -18,6 +18,8 @@ import { UploadUrlRequestDto } from './dto/upload-url-request.dto';
 import { Project } from 'src/entities/project.entity';
 import { ulid } from 'ulid';
 import { CompleteUploadDto } from './dto/complete-upload.dto';
+import { DubJobsService } from '../dub-jobs/dub-jobs.service';
+import { DubJob } from 'src/entities/dub-job.entity';
 
 @Injectable()
 export class VideosService {
@@ -31,6 +33,7 @@ export class VideosService {
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
     private readonly configService: ConfigService,
+    private readonly dubJobService: DubJobsService,
   ) {
     this.s3Client = new S3Client({
       region: this.configService.get('AWS_REGION'),
@@ -70,6 +73,7 @@ export class VideosService {
       projectId: project.uuid,
       s3Key,
       status: 'uploading',
+      mimeType: uploadUrlRequestDto.contentType,
     });
     await this.videoRepository.save(videoAsset);
 
@@ -127,15 +131,28 @@ export class VideosService {
       throw new BadRequestException('S3에 업로드된 파일이 존재하지 않습니다.');
     }
 
+    const headResult = await this.s3Client.send(
+      new HeadObjectCommand({
+        Bucket: this.bucketName,
+        Key: videoAsset.s3Key,
+      }),
+    );
+
     videoAsset.srcLang = completeUploadDto.srcLang;
     videoAsset.dstLang = completeUploadDto.dstLang;
     videoAsset.status = 'ready';
+    videoAsset.fileSize = headResult.ContentLength;
 
     if (completeUploadDto.durationSec) {
       videoAsset.durationSec = completeUploadDto.durationSec;
     }
 
     await this.videoRepository.save(videoAsset);
+
+    const dubJob = await this.dubJobService.createFromVideoAsset(videoAsset);
+
+    // AI 파이프라인 트리거
+    // await this.nofifyAIPipeline(dubJob);
 
     return {
       uuid: videoAsset.uuid,
@@ -144,6 +161,11 @@ export class VideosService {
       dstLang: videoAsset.dstLang,
       s3Key: videoAsset.s3Key,
       cloudfrontUrl: `https://${this.cloudfrontDomain}/${videoAsset.s3Key}`,
+      dubJobId: dubJob.uuid,
     };
+  }
+
+  private async notifyAIPipeline(dubJob: DubJob) {
+    // TODO: SQS Queue 메시지 전송
   }
 }
