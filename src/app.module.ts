@@ -12,6 +12,8 @@ import { UsersModule } from './modules/users/users.module';
 import { DevtoolsModule } from '@nestjs/devtools-integration';
 import { ProjectsModule } from './modules/projects/projects.module';
 import { VideosModule } from './modules/videos/videos.module';
+import { DubJobsModule } from './modules/dub-jobs/dub-jobs.module';
+import { WorkerModule } from './modules/worker/worker.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { VideosModule } from './modules/videos/videos.module';
     UsersModule,
     ProjectsModule,
     VideosModule,
+    DubJobsModule,
+    WorkerModule,
   ],
   controllers: [AppController],
   providers: [AppService],
