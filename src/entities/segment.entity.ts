@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { DubJob } from './dub-job.entity';
 import { Speaker } from './speaker.entity';
@@ -11,6 +11,7 @@ export enum SegmentStatus {
 }
 
 @Entity('segment')
+@Index(['dubJobId', 'segmentIndex'], { unique: true })
 export class Segment extends BaseEntity {
   @Column({ name: 'segment_index' })
   segmentIndex: number;
