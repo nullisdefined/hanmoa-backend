@@ -272,7 +272,7 @@ export class VideosService {
     try {
       const message = {
         dubJobId: dubJob.uuid,
-        VideoAssetId: dubJob.videoAssetId,
+        videoAssetId: dubJob.videoAssetId,
         projectId: dubJob.projectId,
         srcLang: dubJob.srcLang,
         dstLang: dubJob.dstLang,
