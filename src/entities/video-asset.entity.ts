@@ -20,6 +20,12 @@ export class VideoAsset extends BaseEntity {
   @Column({ name: 'dst_lang', nullable: true })
   dstLang: lang;
 
+  @Column({ name: 'file_size', type: 'bigint', nullable: true })
+  fileSize: number;
+
+  @Column({ name: 'mime_type', nullable: true })
+  mimeType: string;
+
   @Column({
     type: 'varchar',
     default: 'uploading',
