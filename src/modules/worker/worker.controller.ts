@@ -24,7 +24,7 @@ export class WorkerController {
 
   @ApiOperation({ summary: '대기 중인 더빙 작업 목록 조회' })
   @Get('jobs/pending')
-  async getPendingJobs(@Query('limit') limit: number = 10) {
+  async getPendingJobs(@Query('limit', new ParseIntPipe({ optional: true })) limit = 10) {
     const jobs = await this.dubJobsService.findPendingJobs(limit);
 
     return jobs.map((job) => ({
