@@ -8,7 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { WorkerService } from './worker.service';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { DubJobsService } from '../dub-jobs/dub-jobs.service';
 import { DubJobStatus } from 'src/entities/dub-job.entity';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
@@ -22,6 +22,7 @@ export class WorkerController {
     private readonly dubJobsService: DubJobsService,
   ) {}
 
+  @ApiOperation({ summary: '대기 중인 더빙 작업 목록 조회' })
   @Get('jobs/pending')
   async getPendingJobs(@Query('limit') limit: number = 10) {
     const jobs = await this.dubJobsService.findPendingJobs(limit);
@@ -39,6 +40,7 @@ export class WorkerController {
     }));
   }
 
+  @ApiOperation({ summary: '더빙 작업 처리 시작 선언' })
   @Post('jobs/:jobId/claim')
   async claimJob(@Param('jobId') jobId: string) {
     const dubJob = await this.dubJobsService.updateStatus(
@@ -53,6 +55,7 @@ export class WorkerController {
     };
   }
 
+  @ApiOperation({ summary: '더빙 작업 상태 업데이트' })
   @Patch('jobs/:jobId/status')
   async updateJobStatus(
     @Param('jobId') jobId: string,
@@ -70,6 +73,7 @@ export class WorkerController {
     };
   }
 
+  @ApiOperation({ summary: '비디오 세그먼트 메타데이터 저장' })
   @Post('jobs/:jobId/segments')
   async saveSegments(
     @Param('jobId') jobId: string,
@@ -93,6 +97,7 @@ export class WorkerController {
     };
   }
 
+  @ApiOperation({ summary: '더빙 작업 상세 정보 조회' })
   @Get('jobs/:jobId')
   async getJob(@Param('jobId') jobId: string) {
     const job = await this.dubJobsService.findOne(jobId);
