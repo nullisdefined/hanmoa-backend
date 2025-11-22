@@ -26,7 +26,12 @@ export class DubJobsService {
         videoS3Key: videoAsset.s3Key,
       },
     });
-    return this.dubJobRepository.save(dubJob);
+    const savedDubJob = await this.dubJobRepository.save(dubJob);
+
+    return this.dubJobRepository.findOne({
+      where: { uuid: savedDubJob.uuid },
+      relations: ['videoAsset'],
+    });
   }
 
   async findPendingJobs(limit: number = 10): Promise<DubJob[]> {
