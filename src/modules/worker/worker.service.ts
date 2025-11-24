@@ -113,7 +113,7 @@ export class WorkerService {
 
   async updateJobStep(
     jobId: string,
-    stepType: string,
+    stepType: StepType,
     dto: UpdateJobStepDto,
   ): Promise<JobStep> {
     const dubJob = await this.dubJobRepository.findOne({
@@ -127,7 +127,7 @@ export class WorkerService {
     let step = await this.jobStepRepository.findOne({
       where: {
         dubJobId: jobId,
-        type: stepType as StepType,
+        type: stepType,
       },
     });
 
@@ -135,7 +135,7 @@ export class WorkerService {
       // 존재하지 않으면 새로 생성
       step = this.jobStepRepository.create({
         dubJobId: jobId,
-        type: stepType as StepType,
+        type: stepType,
         status: dto.status,
         stepOrder: dto.stepOrder || 0,
       });

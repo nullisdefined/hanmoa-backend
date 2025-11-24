@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  ParseEnumPipe,
   Patch,
   Post,
   Query,
@@ -17,6 +18,7 @@ import { SaveSegmentsDto } from './dto/save-segments.dto';
 import { UpdateSegmentsDto } from './dto/update-segments.dto';
 import { SaveSpeakersDto } from './dto/save-speakers.dto';
 import { UpdateJobStepDto } from './dto/update-job-step.dto';
+import { StepType } from 'src/entities/job-step.entity';
 
 @ApiTags('Worker')
 @Controller('worker')
@@ -159,7 +161,7 @@ export class WorkerController {
   @Patch('jobs/:jobId/steps/:stepType')
   async updateJobStep(
     @Param('jobId') jobId: string,
-    @Param('stepType') stepType: string,
+    @Param('stepType', new ParseEnumPipe(StepType)) stepType: StepType,
     @Body() updateStepDto: UpdateJobStepDto,
   ) {
     const step = await this.workerService.updateJobStep(
