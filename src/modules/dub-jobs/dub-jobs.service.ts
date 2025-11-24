@@ -90,6 +90,7 @@ export class DubJobsService {
         'videoAsset',
         'project',
         'segments',
+        'segments.speaker',
         'speakers',
         'outputs',
         'steps',
