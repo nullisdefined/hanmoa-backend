@@ -61,13 +61,13 @@ export class ProjectsService {
     uuid: string,
     updateProjectDto: UpdateProjectDto,
   ): Promise<Project> {
-    const project = await this.findOwnedProjectOrFail(uuid, userId);
+    const project = await this.findOwnedProjectForUpdateOrFail(uuid, userId);
     Object.assign(project, updateProjectDto);
     return this.projectRepository.save(project);
   }
 
   async remove(userId: string, uuid: string): Promise<ApiResponseDto<void>> {
-    const project = await this.findOwnedProjectOrFail(uuid, userId);
+    const project = await this.findOwnedProjectForUpdateOrFail(uuid, userId);
     await this.projectRepository.remove(project);
     return ApiResponseDto.ok(undefined, '프로젝트가 삭제되었습니다.');
   }
@@ -92,6 +92,21 @@ export class ProjectsService {
           createdAt: 'DESC',
         },
       },
+    });
+
+    if (!project) {
+      throw new NotFoundException('프로젝트를 찾을 수 없습니다.');
+    }
+
+    return project;
+  }
+
+  private async findOwnedProjectForUpdateOrFail(
+    uuid: string,
+    userId: string,
+  ): Promise<Project> {
+    const project = await this.projectRepository.findOne({
+      where: { uuid, userId },
     });
 
     if (!project) {
