@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  ParseEnumPipe,
   Patch,
   Post,
   Query,
@@ -11,9 +12,13 @@ import {
 import { WorkerService } from './worker.service';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { DubJobsService } from '../dub-jobs/dub-jobs.service';
-import { DubJobStatus } from 'src/entities/dub-job.entity';
+import { DubJob, DubJobStatus } from 'src/entities/dub-job.entity';
 import { UpdateJobStatusDto } from './dto/update-job-status.dto';
 import { SaveSegmentsDto } from './dto/save-segments.dto';
+import { UpdateSegmentsDto } from './dto/update-segments.dto';
+import { SaveSpeakersDto } from './dto/save-speakers.dto';
+import { UpdateJobStepDto } from './dto/update-job-step.dto';
+import { StepType } from 'src/entities/job-step.entity';
 
 @ApiTags('Worker')
 @Controller('worker')
@@ -102,26 +107,78 @@ export class WorkerController {
 
   @ApiOperation({ summary: '더빙 작업 상세 정보 조회' })
   @Get('jobs/:jobId')
-  async getJob(@Param('jobId') jobId: string) {
-    const job = await this.dubJobsService.findOne(jobId);
+  getJob(@Param('jobId') jobId: string): Promise<DubJob> {
+    return this.dubJobsService.findOne(jobId);
+  }
+
+  @ApiOperation({ summary: '세그먼트 텍스트 및 상태 업데이트 (일괄)' })
+  @Patch('jobs/:jobId/segments')
+  async updateSegments(
+    @Param('jobId') jobId: string,
+    @Body() updateSegmentsDto: UpdateSegmentsDto,
+  ) {
+    const segments = await this.workerService.updateSegments(
+      jobId,
+      updateSegmentsDto,
+    );
 
     return {
-      dubJobId: job.uuid,
-      videoAssetId: job.videoAssetId,
-      projectId: job.projectId,
-      srcLang: job.srcLang,
-      dstLang: job.dstLang,
-      status: job.status,
-      videoS3Key: job.videoAsset.s3Key,
-      segments: job.segments.map((seg) => ({
+      success: true,
+      updatedCount: segments.length,
+      segments: segments.map((seg) => ({
         segmentId: seg.uuid,
         segmentIndex: seg.segmentIndex,
-        startMs: seg.startMs,
-        endMs: seg.endMs,
-        videoSegmentS3Key: seg.videoSegmentS3Key,
-        audioSegmentS3Key: seg.audioSegmentS3Key,
+        srcText: seg.srcText,
+        mtText: seg.mtText,
         status: seg.status,
       })),
+    };
+  }
+
+  @ApiOperation({ summary: '화자 정보 저장' })
+  @Post('jobs/:jobId/speakers')
+  async saveSpeakers(
+    @Param('jobId') jobId: string,
+    @Body() saveSpeakersDto: SaveSpeakersDto,
+  ) {
+    const speakers = await this.workerService.saveSpeakers(
+      jobId,
+      saveSpeakersDto,
+    );
+
+    return {
+      success: true,
+      speakersCreated: speakers.length,
+      speakers: speakers.map((spk) => ({
+        speakerId: spk.uuid,
+        speakerLabel: spk.speakerLabel,
+        clonedVoiceId: spk.clonedVoiceId,
+      })),
+    };
+  }
+
+  @ApiOperation({ summary: '파이프라인 단계 업데이트' })
+  @Patch('jobs/:jobId/steps/:stepType')
+  async updateJobStep(
+    @Param('jobId') jobId: string,
+    @Param('stepType', new ParseEnumPipe(StepType)) stepType: StepType,
+    @Body() updateStepDto: UpdateJobStepDto,
+  ) {
+    const step = await this.workerService.updateJobStep(
+      jobId,
+      stepType,
+      updateStepDto,
+    );
+
+    return {
+      success: true,
+      step: {
+        type: step.type,
+        status: step.status,
+        stepOrder: step.stepOrder,
+        startedAt: step.startedAt,
+        completedAt: step.completedAt,
+      },
     };
   }
 }
