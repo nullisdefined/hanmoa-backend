@@ -78,6 +78,20 @@ export class ProjectsService {
   ): Promise<Project> {
     const project = await this.projectRepository.findOne({
       where: { uuid, userId },
+      relations: [
+        'videoAssets',
+        'videoAssets.dubJobs',
+        'videoAssets.dubJobs.segments',
+        'videoAssets.dubJobs.segments.speaker',
+        'videoAssets.dubJobs.speakers',
+        'videoAssets.dubJobs.outputs',
+        'videoAssets.dubJobs.steps',
+      ],
+      order: {
+        videoAssets: {
+          createdAt: 'DESC',
+        },
+      },
     });
 
     if (!project) {
