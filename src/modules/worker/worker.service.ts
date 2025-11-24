@@ -133,11 +133,20 @@ export class WorkerService {
 
     if (!step) {
       // 존재하지 않으면 새로 생성
+      // 해당 job의 최대 stepOrder를 조회하여 자동 증가
+      const maxStepOrder = await this.jobStepRepository
+        .createQueryBuilder('step')
+        .select('MAX(step.stepOrder)', 'max')
+        .where('step.dubJobId = :jobId', { jobId })
+        .getRawOne<{ max: number | null }>();
+
+      const nextStepOrder = (maxStepOrder?.max ?? -1) + 1;
+
       step = this.jobStepRepository.create({
         dubJobId: jobId,
         type: stepType,
         status: dto.status,
-        stepOrder: dto.stepOrder || 0,
+        stepOrder: nextStepOrder,
       });
     }
 
