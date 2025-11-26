@@ -5,6 +5,8 @@ import { VideoAsset } from 'src/entities/video-asset.entity';
 import { Project } from 'src/entities/project.entity';
 import { ConfigService } from '@nestjs/config';
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { DubJobsService } from '../dub-jobs/dub-jobs.service';
+import { WINSTON_MODULE_PROVIDER } from 'nest-winston';
 
 const mockVideoRepository = {
   findOne: jest.fn(),
@@ -23,9 +25,21 @@ const mockConfigService = {
       AWS_REGION: 'ap-northeast-2',
       AWS_S3_BUCKET: 'test-bucket',
       AWS_CLOUDFRONT_DOMAIN: 'test.cloudfront.net',
+      AWS_SQS_QUEUE_URL: 'https://sqs.ap-northeast-2.amazonaws.com/test-queue',
     };
     return config[key];
   }),
+};
+
+const mockDubJobsService = {
+  createFromVideoAsset: jest.fn(),
+};
+
+const mockLogger = {
+  info: jest.fn(),
+  error: jest.fn(),
+  warn: jest.fn(),
+  debug: jest.fn(),
 };
 
 // S3 send 함수 mock
@@ -38,6 +52,13 @@ jest.mock('@aws-sdk/client-s3', () => ({
   })),
   PutObjectCommand: jest.fn(),
   HeadObjectCommand: jest.fn(),
+}));
+
+jest.mock('@aws-sdk/client-sqs', () => ({
+  SQSClient: jest.fn().mockImplementation(() => ({
+    send: jest.fn(),
+  })),
+  SendMessageCommand: jest.fn(),
 }));
 
 jest.mock('@aws-sdk/s3-request-presigner', () => ({
@@ -62,6 +83,14 @@ describe('VideosService', () => {
         {
           provide: ConfigService,
           useValue: mockConfigService,
+        },
+        {
+          provide: DubJobsService,
+          useValue: mockDubJobsService,
+        },
+        {
+          provide: WINSTON_MODULE_PROVIDER,
+          useValue: mockLogger,
         },
       ],
     }).compile();
@@ -165,6 +194,12 @@ describe('VideosService', () => {
         },
       };
 
+      const mockDubJob = {
+        uuid: 'dub-job-123',
+        projectId: 'project-123',
+        videoAssetId: videoId,
+      };
+
       mockVideoRepository.findOne.mockResolvedValue(mockVideoAsset);
       mockVideoRepository.save.mockResolvedValue({
         ...mockVideoAsset,
@@ -173,6 +208,7 @@ describe('VideosService', () => {
         dstLang: completeUploadDto.dstLang,
         durationSec: completeUploadDto.durationSec,
       });
+      mockDubJobsService.createFromVideoAsset.mockResolvedValue(mockDubJob);
 
       // S3 HeadObjectCommand 성공 mock
       mockS3Send.mockResolvedValue({});
@@ -230,7 +266,5 @@ describe('VideosService', () => {
         service.completeUpload(userId, videoId, completeUploadDto),
       ).rejects.toThrow(ForbiddenException);
     });
-
-    // TODO: S3 파일 존재 여부 확인 통합 테스트 필요
   });
 });
