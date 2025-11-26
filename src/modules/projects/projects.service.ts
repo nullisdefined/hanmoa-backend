@@ -37,6 +37,7 @@ export class ProjectsService {
 
     const [projects, total] = await this.projectRepository.findAndCount({
       where: { userId },
+      relations: ['videoAssets'],
       order: { createdAt: 'DESC' },
       skip,
       take: limit,
