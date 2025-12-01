@@ -4,14 +4,16 @@ import { DubJob } from 'src/entities/dub-job.entity';
 import { Segment, SegmentStatus } from 'src/entities/segment.entity';
 import { Speaker } from 'src/entities/speaker.entity';
 import { JobStep, StepType, StepStatus } from 'src/entities/job-step.entity';
-import { Repository, In } from 'typeorm';
-import { SaveSegmentsDto } from './dto/save-segments.dto';
-import { UpdateSegmentsDto } from './dto/update-segments.dto';
-import { SaveSpeakersDto } from './dto/save-speakers.dto';
-import { UpdateJobStepDto } from './dto/update-job-step.dto';
+import { OutputAsset, OutputStatus } from 'src/entities/output-asset.entity';
+import { Repository } from 'typeorm';
+import { SaveTranscriptionDto } from './dto/save-transcription.dto';
+import { SaveOutputDto } from './dto/save-output.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class WorkerService {
+  private cloudfrontDomain: string;
+
   constructor(
     @InjectRepository(Segment)
     private readonly segmentRepository: Repository<Segment>,
@@ -21,36 +23,21 @@ export class WorkerService {
     private readonly speakerRepository: Repository<Speaker>,
     @InjectRepository(JobStep)
     private readonly jobStepRepository: Repository<JobStep>,
-  ) {}
-
-  async saveSegments(jobId: string, dto: SaveSegmentsDto): Promise<Segment[]> {
-    const dubJob = await this.dubJobRepository.findOne({
-      where: { uuid: jobId },
-    });
-
-    if (!dubJob) {
-      throw new NotFoundException('DubJob을 찾을 수 없습니다.');
-    }
-
-    const segments = dto.segments.map((seg) =>
-      this.segmentRepository.create({
-        dubJobId: dubJob.uuid,
-        segmentIndex: seg.segmentIndex,
-        startMs: seg.startMs,
-        endMs: seg.endMs,
-        videoSegmentS3Key: seg.videoSegmentS3Key,
-        audioSegmentS3Key: seg.audioSegmentS3Key,
-        status: SegmentStatus.PENDING,
-        srcText: '', // STT 이전
-      }),
-    );
-
-    return await this.segmentRepository.save(segments);
+    @InjectRepository(OutputAsset)
+    private readonly outputAssetRepository: Repository<OutputAsset>,
+    private readonly configService: ConfigService,
+  ) {
+    this.cloudfrontDomain = this.configService.get('AWS_CLOUDFRONT_DOMAIN');
   }
 
-  async updateSegments(
+  /**
+   * STT + 번역 파이프라인 결과를 세그먼트로 저장
+   * - 기존 세그먼트가 있으면 업데이트, 없으면 새로 생성
+   * - 시간 단위: 초(float) → 밀리초(int) 변환
+   */
+  async saveTranscription(
     jobId: string,
-    dto: UpdateSegmentsDto,
+    dto: SaveTranscriptionDto,
   ): Promise<Segment[]> {
     const dubJob = await this.dubJobRepository.findOne({
       where: { uuid: jobId },
@@ -60,37 +47,65 @@ export class WorkerService {
       throw new NotFoundException('DubJob을 찾을 수 없습니다.');
     }
 
-    const segmentIds = dto.segments.map((s) => s.segmentId);
-    const segments = await this.segmentRepository.find({
-      where: {
-        uuid: In(segmentIds),
-        dubJobId: jobId,
-      },
+    // 기존 세그먼트 조회 (segmentIndex 순서로 매칭)
+    const existingSegments = await this.segmentRepository.find({
+      where: { dubJobId: jobId },
+      order: { segmentIndex: 'ASC' },
     });
 
-    if (segments.length !== segmentIds.length) {
-      throw new NotFoundException('일부 세그먼트를 찾을 수 없습니다.');
-    }
+    const segments: Segment[] = [];
 
-    // 업데이트 매핑
-    const updateMap = new Map(dto.segments.map((s) => [s.segmentId, s]));
+    for (let i = 0; i < dto.segments.length; i++) {
+      const seg = dto.segments[i];
+      const startMs = Math.round(seg.start * 1000);
+      const endMs = Math.round(seg.end * 1000);
 
-    segments.forEach((segment) => {
-      const update = updateMap.get(segment.uuid);
-      if (update) {
-        if (update.srcText !== undefined) segment.srcText = update.srcText;
-        if (update.mtText !== undefined) segment.mtText = update.mtText;
-        if (update.status !== undefined) segment.status = update.status;
-        if (update.speakerId !== undefined)
-          segment.speakerId = update.speakerId;
-        if (update.audioUrl !== undefined) segment.audioUrl = update.audioUrl;
+      let segment: Segment;
+
+      // 기존 세그먼트가 있으면 업데이트
+      if (existingSegments[i]) {
+        segment = existingSegments[i];
+        segment.startMs = startMs;
+        segment.endMs = endMs;
+        segment.srcText = seg.text;
+        segment.mtText = seg.translated;
+        segment.status = SegmentStatus.TRANSLATED;
+      } else {
+        // 없으면 새로 생성
+        segment = this.segmentRepository.create({
+          dubJobId: jobId,
+          segmentIndex: i,
+          startMs,
+          endMs,
+          srcText: seg.text,
+          mtText: seg.translated,
+          status: SegmentStatus.TRANSLATED,
+        });
       }
-    });
+
+      // 화자 레이블이 있으면 매칭
+      if (seg.speakerLabel) {
+        const speaker = await this.speakerRepository.findOne({
+          where: {
+            dubJobId: jobId,
+            speakerLabel: seg.speakerLabel,
+          },
+        });
+        if (speaker) {
+          segment.speakerId = speaker.uuid;
+        }
+      }
+
+      segments.push(segment);
+    }
 
     return await this.segmentRepository.save(segments);
   }
 
-  async saveSpeakers(jobId: string, dto: SaveSpeakersDto): Promise<Speaker[]> {
+  /**
+   * 더빙 작업의 최종 결과물 저장
+   */
+  async saveOutput(jobId: string, dto: SaveOutputDto): Promise<OutputAsset> {
     const dubJob = await this.dubJobRepository.findOne({
       where: { uuid: jobId },
     });
@@ -99,69 +114,19 @@ export class WorkerService {
       throw new NotFoundException('DubJob을 찾을 수 없습니다.');
     }
 
-    const speakers = dto.speakers.map((spk) =>
-      this.speakerRepository.create({
-        dubJobId: jobId,
-        speakerLabel: spk.speakerLabel,
-        clonedVoiceId: spk.clonedVoiceId,
-        metadata: spk.metadata,
-      }),
-    );
+    const fileUrl = `https://${this.cloudfrontDomain}/${dto.s3Key}`;
 
-    return await this.speakerRepository.save(speakers);
-  }
-
-  async updateJobStep(
-    jobId: string,
-    stepType: StepType,
-    dto: UpdateJobStepDto,
-  ): Promise<JobStep> {
-    const dubJob = await this.dubJobRepository.findOne({
-      where: { uuid: jobId },
+    const outputAsset = this.outputAssetRepository.create({
+      dubJobId: jobId,
+      type: dto.type,
+      s3Key: dto.s3Key,
+      fileUrl,
+      fileSize: dto.fileSize,
+      mimeType: dto.mimeType,
+      durationMs: dto.durationMs,
+      status: OutputStatus.COMPLETED,
     });
 
-    if (!dubJob) {
-      throw new NotFoundException('DubJob을 찾을 수 없습니다.');
-    }
-
-    let step = await this.jobStepRepository.findOne({
-      where: {
-        dubJobId: jobId,
-        type: stepType,
-      },
-    });
-
-    if (!step) {
-      // 존재하지 않으면 새로 생성
-      // 해당 job의 최대 stepOrder를 조회하여 자동 증가
-      const maxStepOrder = await this.jobStepRepository
-        .createQueryBuilder('step')
-        .select('MAX(step.stepOrder)', 'max')
-        .where('step.dubJobId = :jobId', { jobId })
-        .getRawOne<{ max: number | null }>();
-
-      const nextStepOrder = (maxStepOrder?.max ?? -1) + 1;
-
-      step = this.jobStepRepository.create({
-        dubJobId: jobId,
-        type: stepType,
-        status: dto.status,
-        stepOrder: nextStepOrder,
-      });
-    }
-
-    if (dto.status !== undefined) step.status = dto.status;
-    if (dto.errorMessage !== undefined) step.errorMessage = dto.errorMessage;
-    if (dto.result !== undefined) step.result = dto.result;
-
-    if (dto.status === StepStatus.IN_PROGRESS && !step.startedAt) {
-      step.startedAt = new Date();
-    }
-
-    if (dto.status === StepStatus.COMPLETED && !step.completedAt) {
-      step.completedAt = new Date();
-    }
-
-    return await this.jobStepRepository.save(step);
+    return await this.outputAssetRepository.save(outputAsset);
   }
 }

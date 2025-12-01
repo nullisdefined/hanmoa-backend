@@ -7,10 +7,11 @@ import { DubJob } from 'src/entities/dub-job.entity';
 import { DubJobsModule } from '../dub-jobs/dub-jobs.module';
 import { JobStep } from 'src/entities/job-step.entity';
 import { Speaker } from 'src/entities/speaker.entity';
+import { OutputAsset } from 'src/entities/output-asset.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Segment, DubJob, Speaker, JobStep]),
+    TypeOrmModule.forFeature([Segment, DubJob, Speaker, JobStep, OutputAsset]),
     DubJobsModule,
   ],
   controllers: [WorkerController],

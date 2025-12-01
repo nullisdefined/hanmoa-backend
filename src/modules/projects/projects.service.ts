@@ -9,13 +9,19 @@ import {
   PaginatedResponseDto,
   PaginationMetaDto,
 } from 'src/common/dto/api-response.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ProjectsService {
+  private cloudfrontDomain: string;
+
   constructor(
     @InjectRepository(Project)
     private readonly projectRepository: Repository<Project>,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.cloudfrontDomain = this.configService.get('AWS_CLOUDFRONT_DOMAIN');
+  }
 
   async create(
     userId: string,
@@ -37,7 +43,7 @@ export class ProjectsService {
 
     const [projects, total] = await this.projectRepository.findAndCount({
       where: { userId },
-      relations: ['videoAssets'],
+      relations: ['videoAsset'],
       order: { createdAt: 'DESC' },
       skip,
       take: limit,
@@ -53,8 +59,21 @@ export class ProjectsService {
     return new PaginatedResponseDto(projects, meta);
   }
 
-  async findOne(userId: string, uuid: string): Promise<Project> {
-    return this.findOwnedProjectOrFail(uuid, userId);
+  async findOne(userId: string, uuid: string): Promise<any> {
+    const project = await this.findOwnedProjectOrFail(uuid, userId);
+
+    // VideoAsset에 CloudFront URL 추가
+    const projectWithUrl = {
+      ...project,
+      videoAsset: project.videoAsset
+        ? {
+            ...project.videoAsset,
+            videoUrl: `https://${this.cloudfrontDomain}/${project.videoAsset.s3Key}`,
+          }
+        : null,
+    };
+
+    return projectWithUrl;
   }
 
   async update(
@@ -80,19 +99,14 @@ export class ProjectsService {
     const project = await this.projectRepository.findOne({
       where: { uuid, userId },
       relations: [
-        'videoAssets',
-        'videoAssets.dubJobs',
-        'videoAssets.dubJobs.segments',
-        'videoAssets.dubJobs.segments.speaker',
-        'videoAssets.dubJobs.speakers',
-        'videoAssets.dubJobs.outputs',
-        'videoAssets.dubJobs.steps',
+        'videoAsset',
+        'videoAsset.dubJobs',
+        'videoAsset.dubJobs.segments',
+        'videoAsset.dubJobs.segments.speaker',
+        'videoAsset.dubJobs.speakers',
+        'videoAsset.dubJobs.outputs',
+        'videoAsset.dubJobs.steps',
       ],
-      order: {
-        videoAssets: {
-          createdAt: 'DESC',
-        },
-      },
     });
 
     if (!project) {
