@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, JoinColumn, OneToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { Project } from './project.entity';
 import { DubJob } from './dub-job.entity';
@@ -8,7 +8,7 @@ export type VideoStatus = 'uploading' | 'processing' | 'ready' | 'error';
 
 @Entity('video_assets')
 export class VideoAsset extends BaseEntity {
-  @Column({ name: 'project_id' })
+  @Column({ name: 'project_id', unique: true })
   projectId: string;
 
   @Column({ name: 's3_key' })
@@ -39,7 +39,7 @@ export class VideoAsset extends BaseEntity {
   @Column({ type: 'json', name: 'media_meta', nullable: true })
   mediaMeta: Record<string, any>;
 
-  @ManyToOne(() => Project, (project) => project.videoAssets)
+  @OneToOne(() => Project, (project) => project.videoAsset)
   @JoinColumn({ name: 'project_id' })
   project: Project;
 

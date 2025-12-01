@@ -16,12 +16,6 @@ export class Segment extends BaseEntity {
   @Column({ name: 'segment_index' })
   segmentIndex: number;
 
-  @Column({ name: 'video_segment_s3_key', nullable: true })
-  videoSegmentS3Key: string; // 비디오 세그먼트 S3 경로
-
-  @Column({ name: 'audio_segment_s3_key', nullable: true })
-  audioSegmentS3Key: string; // 오디오 세그먼트 S3 경로
-
   @Column({ name: 'dub_job_id' })
   dubJobId: string;
 

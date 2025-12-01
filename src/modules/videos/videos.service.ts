@@ -71,10 +71,9 @@ export class VideosService {
       throw new ForbiddenException('이 프로젝트에 대한 권한이 없습니다.');
     }
 
-    // 기존 uploading 상태의 비디오 제거
+    // 프로젝트에 기존 비디오가 있으면 삭제
     await this.videoRepository.delete({
       projectId: project.uuid,
-      status: 'uploading',
     });
 
     const filesExtension = uploadUrlRequestDto.fileName.split('.').pop();
@@ -201,10 +200,9 @@ export class VideosService {
       throw new ForbiddenException('이 프로젝트에 대한 권한이 없습니다.');
     }
 
-    // 기존 uploading 상태의 비디오 제거
+    // 프로젝트에 기존 비디오가 있으면 모두 삭제 (1:1 관계)
     await this.videoRepository.delete({
       projectId: project.uuid,
-      status: 'uploading',
     });
 
     // 파일 정보 추출 (타입 안전성 확보)
