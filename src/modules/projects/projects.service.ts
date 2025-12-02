@@ -41,13 +41,17 @@ export class ProjectsService {
   ): Promise<PaginatedResponseDto<Project>> {
     const skip = (page - 1) * limit;
 
-    const [projects, total] = await this.projectRepository.findAndCount({
-      where: { userId },
-      relations: ['videoAsset'],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: limit,
-    });
+    // QueryBuilder로 dubJobs 정렬 포함
+    const [projects, total] = await this.projectRepository
+      .createQueryBuilder('project')
+      .leftJoinAndSelect('project.videoAsset', 'videoAsset')
+      .leftJoinAndSelect('videoAsset.dubJobs', 'dubJobs')
+      .where('project.userId = :userId', { userId })
+      .orderBy('project.createdAt', 'DESC')
+      .addOrderBy('dubJobs.createdAt', 'DESC')
+      .skip(skip)
+      .take(limit)
+      .getManyAndCount();
 
     const meta: PaginationMetaDto = {
       page,
